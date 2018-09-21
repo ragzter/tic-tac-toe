@@ -23,19 +23,12 @@ printSquare Zero =  putStr "0"
 printSquare Cross = putStr "x"
 
 printRow :: Row -> IO ()
-printRow (x:[]) = do
-  printSquare x
-  putStr "\n"
-printRow (x:xs) = do
-  printSquare x
-  putStr " "
-  printRow xs
+printRow (x:[]) = printSquare x >> putStr "\n"
+printRow (x:xs) = printSquare x >> putStr " " >> printRow xs
 
 printBoard :: Board -> IO ()
 printBoard (x:[]) = printRow x
-printBoard (x:xs) = do
-  printRow x
-  printBoard xs
+printBoard (x:xs) = printRow x >> printBoard xs
 
 -- Functions for updating a game
 
