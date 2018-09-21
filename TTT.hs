@@ -10,7 +10,7 @@ type Board = [Row]
 -- Functions for creating rows and boards
 
 createRow :: Row
-createRow = [Zero, Zero, Zero]
+createRow = [Blank, Blank, Blank]
 
 createBoard :: Board
 createBoard = [createRow, createRow, createRow]
@@ -24,11 +24,11 @@ printSquare Cross = putStr "x"
 
 printRow :: Row -> IO ()
 printRow (x:[]) = printSquare x >> putStr "\n"
-printRow (x:xs) = printSquare x >> putStr " " >> printRow xs
+printRow (x:xs) = printSquare x >> putStr "|" >> printRow xs
 
 printBoard :: Board -> IO ()
 printBoard (x:[]) = printRow x
-printBoard (x:xs) = printRow x >> printBoard xs
+printBoard (x:xs) = printRow x >> putStr "------\n" >> printBoard xs
 
 -- Functions for updating a game
 
