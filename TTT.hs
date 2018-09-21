@@ -19,7 +19,7 @@ createBoard = [createRow, createRow, createRow]
 
 printSquare :: Square -> IO ()
 printSquare Blank = putStr " "
-printSquare Zero =  putStr "0"
+printSquare Zero = putStr "0"
 printSquare Cross = putStr "x"
 
 printRow :: Row -> IO ()
@@ -31,5 +31,10 @@ printBoard (x:[]) = printRow x
 printBoard (x:xs) = printRow x >> printBoard xs
 
 -- Functions for updating a game
+
+replaceNth :: [a] -> Int -> a -> [a]
+replaceNth [] _ _ = []
+replaceNth (x:xs) 0 r = r : xs
+replaceNth (x:xs) n r = x : replaceNth xs (n - 1) r
 
 -- put :: Board -> Board
