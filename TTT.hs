@@ -37,4 +37,5 @@ replaceNth [] _ _ = []
 replaceNth (x:xs) 0 r = r : xs
 replaceNth (x:xs) n r = x : replaceNth xs (n - 1) r
 
--- put :: Board -> Board
+put :: Board -> Int -> Int -> Square -> Board
+put b x y s = replaceNth b y $ replaceNth (b !! y) x s
