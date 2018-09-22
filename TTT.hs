@@ -24,6 +24,7 @@ sqToStr Zero = "0"
 sqToStr Cross = "x"
 
 type Row = [Square]
+type Line = [Square]
 type Board = [Row]
 
 -- Functions for creating rows and boards
@@ -163,7 +164,7 @@ main = do {
 testBoard :: Board
 testBoard = [[Cross, Blank, Cross], [Zero, Cross, Blank], [Blank, Blank, Cross]]
 
-getLines :: Board -> [[Square]]
+getLines :: Board -> [Line]
 getLines b =
   [
     b !! 0,
@@ -183,3 +184,32 @@ getLines b =
       squareAt b 0 2
     ]
   ]
+
+nOf :: Eq a => a -> [a] -> Int
+nOf x xs = length $ filter (\y -> x == y) xs
+
+exists :: Eq a => a -> [a] -> Bool
+exists x xs = (find (\y -> x == y) xs) /= Nothing
+
+opportunity :: Line -> Bool
+opportunity l =
+  nOf Zero l == 2 &&
+  exists Blank l
+
+risky :: Line -> Bool
+risky l =
+  nOf Cross l == 2 &&
+  exists Blank l
+
+selfPopulated :: Line -> Bool
+selfPopulated = exists Zero
+
+computerMove :: Board -> String
+computerMove b =
+  show selfPopulatedLines
+  where
+    lines = getLines b
+    opportunities = filter opportunity lines
+    risks = filter risky lines
+    selfPopulatedLines = filter selfPopulated lines
+    line = head lines
