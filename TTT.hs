@@ -1,6 +1,7 @@
 
 import Data.Char
 import System.IO
+import Data.List
 
 -- Data types
 
@@ -156,3 +157,29 @@ main = do {
   ; board <- return createBoard
   ; loopGame Cross board
   }
+
+-- In progress
+
+testBoard :: Board
+testBoard = [[Cross, Blank, Cross], [Zero, Cross, Blank], [Blank, Blank, Cross]]
+
+getLines :: Board -> [[Square]]
+getLines b =
+  [
+    b !! 0,
+    b !! 1,
+    b !! 2,
+    transpose b !! 0,
+    transpose b !! 1,
+    transpose b !! 2,
+    [
+      squareAt b 0 0,
+      squareAt b 1 1,
+      squareAt b 2 2
+    ],
+    [
+      squareAt b 2 0,
+      squareAt b 1 1,
+      squareAt b 0 2
+    ]
+  ]
