@@ -66,7 +66,10 @@ readMove s b = do {
   ; yc <- return $ move !! 2
   ; x <- return $ digitToInt xc
   ; y <- return $ digitToInt yc
-  ; return $ put b x y s
+  ; if squareAt b x y /= Blank then
+      return b
+    else
+      return $ put b x y s
   }
 
 -- Functions for determining a winner
@@ -114,13 +117,17 @@ maybeSqToIOSq (Just x) = return x
 announceWinner :: Square -> IO ()
 announceWinner s = do {
   ; str <- return $ sqToStr s
-  ; putStr $ "\n" ++ str ++ " won the game, congratulations !\n\n"
+  ; putStr $ "\n" ++ str ++ " won the game, congratulations!\n\n"
   }
 
 loopGame :: Square -> Board -> IO ()
 loopGame s b = do {
   ; prettyPrintBoard b
   ; nb <- readMove s b
+  ; if nb == b then
+      putStr "You can't steal another persons square!  Redo!\n\n" >> loopGame s b
+    else
+      return ()
   ; winner <- maybeSqToIOSq $ winnerOf nb
   ; if winner == Blank then
       loopGame (opponentOf s) nb
