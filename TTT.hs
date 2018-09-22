@@ -40,8 +40,8 @@ printRow (x:[]) = printSquare x >> putStr "\n"
 printRow (x:xs) = printSquare x >> putStr "|" >> printRow xs
 
 printBoard :: Board -> IO ()
-printBoard (x:[]) = printRow x
-printBoard (x:xs) = printRow x >> putStr "------\n" >> printBoard xs
+printBoard (x:[]) = putStr " " >> printRow x
+printBoard (x:xs) = putStr " " >> printRow x >> putStr " -----\n" >> printBoard xs
 
 prettyPrintBoard :: Board -> IO ()
 prettyPrintBoard b = putStr "\n" >> printBoard b >> putStr "\n"
@@ -108,6 +108,9 @@ diagonalWinner b = notNothing [leftDiagonalWinner b, rightDiagonalWinner b]
 winnerOf :: Board -> Maybe Square
 winnerOf b = notNothing [multiRowWinner b, multiColumnWinner b, diagonalWinner b]
 
+draw :: Board -> Bool
+draw b = (length $ filter ((==) Blank) $ concat b) == 0
+
 -- The Game
 
 maybeSqToIOSq :: Maybe Square -> IO Square
@@ -133,10 +136,13 @@ loopGame s b = do {
   ; nb <- readMove s b
   ; detectAndHandleTheft b nb s
   ; winner <- maybeSqToIOSq $ winnerOf nb
-  ; if winner == Blank then
-      loopGame (opponentOf s) nb
-    else
+  ; if winner /= Blank then
       prettyPrintBoard nb >> announceWinner winner
+    else
+      if draw nb then
+        prettyPrintBoard nb >> putStr "\nEveryone is a winner!\n\n"
+      else
+        loopGame (opponentOf s) nb
   }
 
 main :: IO ()
