@@ -11,7 +11,7 @@ data Square = Blank | Zero | Cross
 instance Show Square where
   show Cross = "x"
   show Zero = "0"
-  show Blank = " "
+  show Blank = "_"
 
 data CSquare = CSquare Square Int Int
   deriving (Eq)
@@ -30,7 +30,7 @@ sqToStr Zero = "0"
 sqToStr Cross = "x"
 
 type Row = [Square]
-type Line = [Square]
+type Line = [CSquare]
 type Board = [Row]
 
 -- Functions for creating rows and boards
@@ -170,25 +170,43 @@ main = do {
 testBoard :: Board
 testBoard = [[Cross, Blank, Cross], [Zero, Cross, Blank], [Blank, Blank, Cross]]
 
+sqsToLine :: [Square] -> String -> Int -> Line
+sqsToLine sqs "row" n =
+  [
+    CSquare (sqs !! 0) 0 n,
+    CSquare (sqs !! 1) 1 n,
+    CSquare (sqs !! 2) 2 n
+  ]
+sqsToLine sqs "column" n =
+  [
+    CSquare (sqs !! 0) n 0,
+    CSquare (sqs !! 1) n 1,
+    CSquare (sqs !! 2) n 2
+  ]
+sqsToLine sqs "diagonal" 0 =
+  [
+    CSquare (sqs !! 0) 0 0,
+    CSquare (sqs !! 1) 1 1,
+    CSquare (sqs !! 2) 2 2
+  ]
+sqsToLine sqs "diagonal" 1 =
+  [
+    CSquare (sqs !! 0) 2 0,
+    CSquare (sqs !! 1) 1 1,
+    CSquare (sqs !! 2) 0 2
+  ]
+
 getLines :: Board -> [Line]
 getLines b =
   [
-    b !! 0,
-    b !! 1,
-    b !! 2,
-    transpose b !! 0,
-    transpose b !! 1,
-    transpose b !! 2,
-    [
-      squareAt b 0 0,
-      squareAt b 1 1,
-      squareAt b 2 2
-    ],
-    [
-      squareAt b 2 0,
-      squareAt b 1 1,
-      squareAt b 0 2
-    ]
+    sqsToLine (b !! 0) "row" 0,
+    sqsToLine (b !! 1) "row" 1,
+    sqsToLine (b !! 2) "row" 2,
+    sqsToLine (transpose b !! 0) "column" 0,
+    sqsToLine (transpose b !! 1) "column" 1,
+    sqsToLine (transpose b !! 2) "column" 2,
+    sqsToLine [squareAt b 0 0, squareAt b 1 1, squareAt b 2 2] "diagonal" 0,
+    sqsToLine [squareAt b 2 0, squareAt b 1 1, squareAt b 0 2] "diagonal" 1
   ]
 
 nOf :: Eq a => a -> [a] -> Int
@@ -197,18 +215,28 @@ nOf x xs = length $ filter (\y -> x == y) xs
 exists :: Eq a => a -> [a] -> Bool
 exists x xs = (find (\y -> x == y) xs) /= Nothing
 
+csqToSq :: CSquare -> Square
+csqToSq (CSquare s _ _) = s
+
 opportunity :: Line -> Bool
 opportunity l =
-  nOf Zero l == 2 &&
-  exists Blank l
+  nOf Zero sqs == 2 &&
+  exists Blank sqs
+  where
+    sqs = map csqToSq l
 
 risky :: Line -> Bool
 risky l =
-  nOf Cross l == 2 &&
-  exists Blank l
+  nOf Cross sqs == 2 &&
+  exists Blank sqs
+  where
+    sqs = map csqToSq l
 
 selfPopulated :: Line -> Bool
-selfPopulated = exists Zero
+selfPopulated l =
+  exists Zero sqs
+  where
+    sqs = map csqToSq l
 
 computerMove :: Board -> String
 computerMove b =
