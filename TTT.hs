@@ -13,6 +13,12 @@ instance Show Square where
   show Zero = "0"
   show Blank = " "
 
+data CSquare = CSquare Square Int Int
+  deriving (Eq)
+
+instance Show CSquare where
+  show (CSquare s x y) = "(" ++ show s ++ " at " ++ show x ++ ", " ++ show y ++ ")"
+
 opponentOf :: Square -> Square
 opponentOf Zero = Cross
 opponentOf Cross = Zero
