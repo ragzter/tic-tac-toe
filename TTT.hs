@@ -176,10 +176,10 @@ main = do {
   ; loopGame Cross board
   }
 
--- In progress
+-- Computer opponent
 
 testBoard :: Board
-testBoard = [[Cross, Blank, Cross], [Zero, Cross, Blank], [Blank, Blank, Cross]]
+testBoard = [[Cross, Zero, Cross], [Blank, Blank, Blank], [Blank, Blank, Blank]]
 
 testLine :: Line
 testLine = head $ getLines testBoard
@@ -248,7 +248,14 @@ risky l =
 
 selfPopulated :: Line -> Bool
 selfPopulated l =
-  exists Zero sqs
+  exists Zero sqs &&
+  exists Blank sqs
+  where
+    sqs = map csqToSq l
+
+available :: Line -> Bool
+available l =
+  exists Blank sqs
   where
     sqs = map csqToSq l
 
@@ -273,10 +280,10 @@ computerMove b =
   else if length selfPopulatedLines > 0 then
     applyLine (selfPopulatedLines !! 0) b
   else
-    applyLine (lines !! 0) b
+    applyLine availableLine b
   where
     lines = getLines b
     opportunities = filter opportunity lines
     risks = filter risky lines
     selfPopulatedLines = filter selfPopulated lines
-    line = head lines
+    availableLine = head $ filter available lines
