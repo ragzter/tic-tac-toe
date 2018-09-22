@@ -19,6 +19,13 @@ data CSquare = CSquare Square Int Int
 instance Show CSquare where
   show (CSquare s x y) = "(" ++ show s ++ " at " ++ show x ++ ", " ++ show y ++ ")"
 
+isBlank :: CSquare -> Bool
+isBlank (CSquare Blank _ _) = True
+isBlank _ = False
+
+coordinateOf :: CSquare -> (Int, Int)
+coordinateOf (CSquare _ x y) = (x, y)
+
 opponentOf :: Square -> Square
 opponentOf Zero = Cross
 opponentOf Cross = Zero
@@ -170,6 +177,9 @@ main = do {
 testBoard :: Board
 testBoard = [[Cross, Blank, Cross], [Zero, Cross, Blank], [Blank, Blank, Cross]]
 
+testLine :: Line
+testLine = head $ getLines testBoard
+
 sqsToLine :: [Square] -> String -> Int -> Line
 sqsToLine sqs "row" n =
   [
@@ -238,9 +248,28 @@ selfPopulated l =
   where
     sqs = map csqToSq l
 
-computerMove :: Board -> String
+coordinateOfBlank :: Line -> (Int, Int)
+coordinateOfBlank l =
+  coordinateOf $ head $ filter isBlank l
+
+applyLine :: Line -> Board -> Board
+applyLine l b =
+  put b x y Zero
+  where
+    coordinates = coordinateOfBlank l
+    x = fst coordinates
+    y = snd coordinates
+
+computerMove :: Board -> Board
 computerMove b =
-  show selfPopulatedLines
+  if length opportunities > 0 then
+    applyLine (opportunities !! 0) b
+  else if length risks > 0 then
+    applyLine (risks !! 0) b
+  else if length selfPopulatedLines > 0 then
+    applyLine (selfPopulatedLines !! 0) b
+  else
+    applyLine (lines !! 0) b
   where
     lines = getLines b
     opportunities = filter opportunity lines
