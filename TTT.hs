@@ -12,10 +12,10 @@ opponentOf Zero = Cross
 opponentOf Cross = Zero
 opponentOf x = x
 
-sToStr :: Square -> String
-sToStr Blank = " "
-sToStr Zero = "0"
-sToStr Cross = "x"
+sqToStr :: Square -> String
+sqToStr Blank = " "
+sqToStr Zero = "0"
+sqToStr Cross = "x"
 
 type Row = [Square]
 type Board = [Row]
@@ -43,6 +43,9 @@ printBoard :: Board -> IO ()
 printBoard (x:[]) = printRow x
 printBoard (x:xs) = printRow x >> putStr "------\n" >> printBoard xs
 
+prettyPrintBoard :: Board -> IO ()
+prettyPrintBoard b = putStr "\n" >> printBoard b >> putStr "\n"
+
 -- Functions for updating a game
 
 replaceNth :: [a] -> Int -> a -> [a]
@@ -55,7 +58,7 @@ put b x y s = replaceNth b y $ replaceNth (b !! y) x s
 
 readMove :: Square -> Board -> IO Board
 readMove s b = do {
-  ; sStr <- return $ sToStr s
+  ; sStr <- return $ sqToStr s
   ; putStr $ "Move (" ++ sStr ++ "): "
   ; hFlush stdout
   ; move <- getLine
@@ -81,8 +84,6 @@ notNothing :: [Maybe Square] -> Maybe Square
 notNothing [] = Nothing
 notNothing (x:xs) = if x /= Nothing then x else notNothing xs
 
--- notNothing ss = head $ filter (\x -> x /= Nothing) ss
-
 multiRowWinner :: Board -> Maybe Square
 multiRowWinner b = notNothing [rowWinner b 0, rowWinner b 1, rowWinner b 2]
 
@@ -101,27 +102,35 @@ rightDiagonalWinner b = sameAndNotBlank (squareAt b 2 0) (squareAt b 1 1) (squar
 diagonalWinner :: Board -> Maybe Square
 diagonalWinner b = notNothing [leftDiagonalWinner b, rightDiagonalWinner b]
 
-winner :: Board -> Maybe Square
-winner b = notNothing [multiRowWinner b, multiColumnWinner b, diagonalWinner b]
-
--- winner [[a, b, c], _, _] = sameAndNotBlank a b c
--- winner [_, [a, b, c], _] = sameAndNotBlank a b c
--- winner [_, _, [a, b, c]] = sameAndNotBlank a b c
--- winner [[d, _, _], [e, _, _], [f, _, _]] = sameAndNotBlank a b c
+winnerOf :: Board -> Maybe Square
+winnerOf b = notNothing [multiRowWinner b, multiColumnWinner b, diagonalWinner b]
 
 -- The Game
 
+maybeSqToIOSq :: Maybe Square -> IO Square
+maybeSqToIOSq Nothing = return Blank
+maybeSqToIOSq (Just x) = return x
+
+announceWinner :: Square -> IO ()
+announceWinner s = do {
+  ; str <- return $ sqToStr s
+  ; putStr $ "\n" ++ str ++ " won the game, congratulations !\n\n"
+  }
+
+loopGame :: Square -> Board -> IO ()
 loopGame s b = do {
-  ; putStr "\n"
-  ; printBoard b
-  ; putStr "\n"
+  ; prettyPrintBoard b
   ; nb <- readMove s b
-  ; loopGame (opponentOf s) nb
+  ; winner <- maybeSqToIOSq $ winnerOf nb
+  ; if winner == Blank then
+      loopGame (opponentOf s) nb
+    else
+      prettyPrintBoard nb >> announceWinner winner
   }
 
 main :: IO ()
 main = do {
-  ; putStr "\nWelcome to TTT !  You are 'x' and you start -- go !\n\n"
+  ; putStr "\nWelcome to TTT !  'x' starts -- go !\n\n"
   ; board <- return createBoard
   ; loopGame Cross board
   }
