@@ -120,14 +120,18 @@ announceWinner s = do {
   ; putStr $ "\n" ++ str ++ " won the game, congratulations!\n\n"
   }
 
+detectAndHandleTheft :: Board -> Board -> Square -> IO ()
+detectAndHandleTheft b nb s =
+  if nb == b then
+    putStr "You can't steal another persons square!  Redo!\n\n" >> loopGame s b
+  else
+    return ()
+
 loopGame :: Square -> Board -> IO ()
 loopGame s b = do {
   ; prettyPrintBoard b
   ; nb <- readMove s b
-  ; if nb == b then
-      putStr "You can't steal another persons square!  Redo!\n\n" >> loopGame s b
-    else
-      return ()
+  ; detectAndHandleTheft b nb s
   ; winner <- maybeSqToIOSq $ winnerOf nb
   ; if winner == Blank then
       loopGame (opponentOf s) nb
@@ -137,7 +141,7 @@ loopGame s b = do {
 
 main :: IO ()
 main = do {
-  ; putStr "\nWelcome to TTT !  'x' starts -- go !\n\n"
+  ; putStr "\nWelcome to TTT!  'x' starts -- go!\n\n"
   ; board <- return createBoard
   ; loopGame Cross board
   }
