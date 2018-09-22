@@ -153,7 +153,11 @@ detectAndHandleTheft b nb s =
 loopGame :: Square -> Board -> IO ()
 loopGame s b = do {
   ; prettyPrintBoard b
-  ; nb <- readMove s b
+  ; nb <-
+    if s == Zero then
+      return $ computerMove b
+    else
+      readMove s b
   ; detectAndHandleTheft b nb s
   ; winner <- maybeSqToIOSq $ winnerOf nb
   ; if winner /= Blank then
