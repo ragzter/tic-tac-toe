@@ -272,6 +272,8 @@ computerMove b =
     applyLine (risks !! 0) b
   else if length selfPopulatedLines > 0 then
     applyLine (selfPopulatedLines !! 0) b
+  else if squareAt b 1 1 == Blank then
+    put b 1 1 Zero
   else
     applyLine availableLine b
   where
