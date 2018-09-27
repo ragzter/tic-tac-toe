@@ -11,9 +11,9 @@ data Square = Blank | Zero | Cross
 instance Show Square where
   show Cross = "x"
   show Zero = "0"
-  show Blank = "_"
+  show Blank = " "
 
-data CSquare = CSquare Square Int Int
+data CSquare = CSquare { square :: Square, x :: Int, y :: Int }
   deriving (Eq)
 
 instance Show CSquare where
@@ -31,61 +31,71 @@ opponentOf Zero = Cross
 opponentOf Cross = Zero
 opponentOf x = x
 
-sqToStr :: Square -> String
-sqToStr Blank = " "
-sqToStr Zero = "0"
-sqToStr Cross = "x"
+data Row = Row { squares :: [Square] }
+  deriving (Eq)
 
-type Row = [Square]
-type Line = [CSquare]
-type Board = [Row]
+instance Show Row where
+  show (Row sqs) = " " ++ (concat (intersperse "|" (map show sqs))) ++ "\n"
+
+data Line = Line { cSquares :: [CSquare] }
+
+instance Show Line where
+  show (Line csqs) = concat (intersperse "--" (map show csqs))
+
+data Board = Board { rows :: [Row] }
+  deriving (Eq)
+
+instance Show Board where
+  show (Board rs) = "\n" ++ (concat (intersperse " -----\n" (map show rs))) ++ "\n"
 
 -- Functions for creating rows and boards
 
 createRow :: Row
-createRow = [Blank, Blank, Blank]
+createRow = Row [Blank, Blank, Blank]
 
 createBoard :: Board
-createBoard = [createRow, createRow, createRow]
+createBoard = Board [createRow, createRow, createRow]
 
--- Functions for printing a Square / Row / Board
+testRow :: Row
+testRow = Row [Cross, Blank, Zero]
 
-printSquare :: Square -> IO ()
-printSquare Blank = putStr " "
-printSquare Zero = putStr "0"
-printSquare Cross = putStr "x"
-
-printRow :: Row -> IO ()
-printRow (x:[]) = printSquare x >> putStr "\n"
-printRow (x:xs) = printSquare x >> putStr "|" >> printRow xs
-
-printBoard :: Board -> IO ()
-printBoard (x:[]) = putStr " " >> printRow x
-printBoard (x:xs) = putStr " " >> printRow x >> putStr " -----\n" >> printBoard xs
-
-prettyPrintBoard :: Board -> IO ()
-prettyPrintBoard b = putStr "\n" >> printBoard b >> putStr "\n"
-
--- Functions for updating a game
+testBoard :: Board
+testBoard =
+  Board [Row [Cross, Zero, Cross],
+         Row [Blank, Cross, Blank],
+         Row [Blank, Blank, Cross]]
 
 replaceNth :: [a] -> Int -> a -> [a]
 replaceNth [] _ _ = []
 replaceNth (x:xs) 0 r = r : xs
 replaceNth (x:xs) n r = x : replaceNth xs (n - 1) r
 
+replaceInRow :: Row -> Int -> Square -> Row
+replaceInRow (Row sqs) x s = Row $ replaceNth sqs x s
+
 put :: Board -> Int -> Int -> Square -> Board
-put b x y s = replaceNth b y $ replaceNth (b !! y) x s
+put (Board rs) x y s =
+  let newRow = replaceInRow (rs !! y) x s
+      newBoard = replaceNth rs y newRow
+  in
+    Board newBoard
+
+squareAt :: Board -> Int -> Int -> Square
+squareAt (Board rs) x y =
+  let (Row sqs) = rs !! y
+  in
+    sqs !! x
+
+-- Functions for updating a game
 
 readMove :: Square -> Board -> IO Board
-readMove s b = do {
-  ; sStr <- return $ sqToStr s
-  ; putStr $ "Move (" ++ sStr ++ "): "
+readMove s b =
+  do {
+  ; putStr $ "Move (" ++ show s ++ "): "
   ; hFlush stdout
   ; move <- getLine
-  ; xc <- return $ move !! 0
-  ; yc <- return $ move !! 2
-  ; x <- return $ digitToInt xc
-  ; y <- return $ digitToInt yc
+  ; x <- return $ digitToInt $ move !! 0
+  ; y <- return $ digitToInt $ move !! 2
   ; if squareAt b x y /= Blank then
       return b
     else
@@ -94,42 +104,71 @@ readMove s b = do {
 
 -- Functions for determining a winner
 
-squareAt :: Board -> Int -> Int -> Square
-squareAt b x y = (b !! y) !! x
-
-sameAndNotBlank :: Square -> Square -> Square -> Maybe Square
-sameAndNotBlank a b c = if a /= Blank && a == b && b == c then Just a else Nothing
-
-rowWinner :: Board -> Int -> Maybe Square
-rowWinner b n = sameAndNotBlank (squareAt b 0 n) (squareAt b 1 n) (squareAt b 2 n)
-
-notNothing :: [Maybe Square] -> Maybe Square
-notNothing [] = Nothing
-notNothing (x:xs) = if x /= Nothing then x else notNothing xs
-
-multiRowWinner :: Board -> Maybe Square
-multiRowWinner b = notNothing [rowWinner b 0, rowWinner b 1, rowWinner b 2]
-
-columnWinner :: Board -> Int -> Maybe Square
-columnWinner b n = sameAndNotBlank (squareAt b n 0) (squareAt b n 1) (squareAt b n 2)
-
-multiColumnWinner :: Board -> Maybe Square
-multiColumnWinner b = notNothing [columnWinner b 0, columnWinner b 1, columnWinner b 2]
-
-leftDiagonalWinner :: Board -> Maybe Square
-leftDiagonalWinner b = sameAndNotBlank (squareAt b 0 0) (squareAt b 1 1) (squareAt b 2 2)
-
-rightDiagonalWinner :: Board -> Maybe Square
-rightDiagonalWinner b = sameAndNotBlank (squareAt b 2 0) (squareAt b 1 1) (squareAt b 0 2)
-
-diagonalWinner :: Board -> Maybe Square
-diagonalWinner b = notNothing [leftDiagonalWinner b, rightDiagonalWinner b]
-
 winnerOf :: Board -> Maybe Square
-winnerOf b = notNothing [multiRowWinner b, multiColumnWinner b, diagonalWinner b]
+winnerOf b =
+  let lines = getLines b
+      checkLineWinner (Line cSqs) =
+        square (cSqs !! 0) == square (cSqs !! 1) &&
+        square (cSqs !! 1) == square (cSqs !! 2) &&
+        square (cSqs !! 0) /= Blank
+      lineWinner = filter checkLineWinner lines
+  in
+    if length lineWinner > 0 then
+      Just (square $ head $ cSquares $ head lineWinner)
+    else
+      Nothing
 
 draw :: Board -> Bool
-draw b = (length $ filter ((==) Blank) $ concat b) == 0
+draw (Board rs) =
+  let occupiedRowP (Row sqs) = sqs !! 0 /= Blank && sqs !! 1 /= Blank && sqs !! 2 /= Blank
+  in
+    occupiedRowP (rs !! 0) && occupiedRowP (rs !! 1) && occupiedRowP (rs !! 2)
+
+-- Line code
+
+sqsToLine :: [Square] -> String -> Int -> Line
+sqsToLine sqs "row" n = Line
+  [
+    CSquare (sqs !! 0) 0 n,
+    CSquare (sqs !! 1) 1 n,
+    CSquare (sqs !! 2) 2 n
+  ]
+sqsToLine sqs "column" n = Line
+  [
+    CSquare (sqs !! 0) n 0,
+    CSquare (sqs !! 1) n 1,
+    CSquare (sqs !! 2) n 2
+  ]
+sqsToLine sqs "diagonal" 0 = Line
+  [
+    CSquare (sqs !! 0) 0 0,
+    CSquare (sqs !! 1) 1 1,
+    CSquare (sqs !! 2) 2 2
+  ]
+sqsToLine sqs "diagonal" 1 = Line
+  [
+    CSquare (sqs !! 0) 2 0,
+    CSquare (sqs !! 1) 1 1,
+    CSquare (sqs !! 2) 0 2
+  ]
+
+getLines :: Board -> [Line]
+getLines (Board rs) =
+  let rowsAsSquares = map squares rs
+  in
+    [
+      sqsToLine (squares (rs !! 0)) "row" 0,
+      sqsToLine (squares (rs !! 1)) "row" 1,
+      sqsToLine (squares (rs !! 2)) "row" 2,
+      sqsToLine (transpose rowsAsSquares !! 0) "column" 0,
+      sqsToLine (transpose rowsAsSquares !! 1) "column" 1,
+      sqsToLine (transpose rowsAsSquares !! 2) "column" 2,
+      sqsToLine [squareAt (Board rs) 0 0, squareAt (Board rs) 1 1, squareAt (Board rs) 2 2] "diagonal" 0,
+      sqsToLine [squareAt (Board rs) 2 0, squareAt (Board rs) 1 1, squareAt (Board rs) 0 2] "diagonal" 1
+    ]
+
+testLine :: Line
+testLine = head $ getLines testBoard
 
 -- The Game
 
@@ -139,8 +178,7 @@ maybeSqToIOSq (Just x) = return x
 
 announceWinner :: Square -> IO ()
 announceWinner s = do {
-  ; str <- return $ sqToStr s
-  ; putStr $ "\n" ++ str ++ " won the game, congratulations!\n\n"
+  ; putStr $ "\n" ++ show s ++ " won the game, congratulations!\n\n"
   }
 
 detectAndHandleTheft :: Board -> Board -> Square -> IO ()
@@ -152,7 +190,7 @@ detectAndHandleTheft b nb s =
 
 loopGame :: Square -> Board -> IO ()
 loopGame s b = do {
-  ; prettyPrintBoard b
+  ; putStr $ show b
   ; nb <-
     if s == Zero then
       return $ computerMove b
@@ -161,10 +199,10 @@ loopGame s b = do {
   ; detectAndHandleTheft b nb s
   ; winner <- maybeSqToIOSq $ winnerOf nb
   ; if winner /= Blank then
-      prettyPrintBoard nb >> announceWinner winner
+      putStr (show nb) >> announceWinner winner
     else
       if draw nb then
-        prettyPrintBoard nb >> putStr "\nEveryone is a winner!\n\n"
+        putStr $ (show nb) ++ "\nEveryone is a winner!\n\n"
       else
         loopGame (opponentOf s) nb
   }
@@ -177,51 +215,6 @@ main = do {
   }
 
 -- Computer opponent
-
-testBoard :: Board
-testBoard = [[Cross, Zero, Cross], [Blank, Blank, Blank], [Blank, Blank, Blank]]
-
-testLine :: Line
-testLine = head $ getLines testBoard
-
-sqsToLine :: [Square] -> String -> Int -> Line
-sqsToLine sqs "row" n =
-  [
-    CSquare (sqs !! 0) 0 n,
-    CSquare (sqs !! 1) 1 n,
-    CSquare (sqs !! 2) 2 n
-  ]
-sqsToLine sqs "column" n =
-  [
-    CSquare (sqs !! 0) n 0,
-    CSquare (sqs !! 1) n 1,
-    CSquare (sqs !! 2) n 2
-  ]
-sqsToLine sqs "diagonal" 0 =
-  [
-    CSquare (sqs !! 0) 0 0,
-    CSquare (sqs !! 1) 1 1,
-    CSquare (sqs !! 2) 2 2
-  ]
-sqsToLine sqs "diagonal" 1 =
-  [
-    CSquare (sqs !! 0) 2 0,
-    CSquare (sqs !! 1) 1 1,
-    CSquare (sqs !! 2) 0 2
-  ]
-
-getLines :: Board -> [Line]
-getLines b =
-  [
-    sqsToLine (b !! 0) "row" 0,
-    sqsToLine (b !! 1) "row" 1,
-    sqsToLine (b !! 2) "row" 2,
-    sqsToLine (transpose b !! 0) "column" 0,
-    sqsToLine (transpose b !! 1) "column" 1,
-    sqsToLine (transpose b !! 2) "column" 2,
-    sqsToLine [squareAt b 0 0, squareAt b 1 1, squareAt b 2 2] "diagonal" 0,
-    sqsToLine [squareAt b 2 0, squareAt b 1 1, squareAt b 0 2] "diagonal" 1
-  ]
 
 nOf :: Eq a => a -> [a] -> Int
 nOf x xs = length $ filter (\y -> x == y) xs
@@ -237,31 +230,31 @@ opportunity l =
   nOf Zero sqs == 2 &&
   exists Blank sqs
   where
-    sqs = map csqToSq l
+    sqs = map csqToSq $ cSquares l
 
 risky :: Line -> Bool
 risky l =
   nOf Cross sqs == 2 &&
   exists Blank sqs
   where
-    sqs = map csqToSq l
+    sqs = map csqToSq $ cSquares l
 
 selfPopulated :: Line -> Bool
 selfPopulated l =
   exists Zero sqs &&
   exists Blank sqs
   where
-    sqs = map csqToSq l
+    sqs = map csqToSq $ cSquares l
 
 available :: Line -> Bool
 available l =
   exists Blank sqs
   where
-    sqs = map csqToSq l
+    sqs = map csqToSq $ cSquares l
 
 coordinateOfBlank :: Line -> (Int, Int)
 coordinateOfBlank l =
-  coordinateOf $ head $ filter isBlank l
+  coordinateOf $ head $ filter isBlank $ cSquares l
 
 applyLine :: Line -> Board -> Board
 applyLine l b =
