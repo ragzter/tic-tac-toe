@@ -20,7 +20,7 @@ loopGame s b = do {
   ; putStr $ show b
   ; nb <-
     if s == Zero then
-      return $ computerMove b
+      return $ computerMove b Zero
     else
       readMove s b
   ; winner <- maybeSqToIOSq $ winnerOf nb

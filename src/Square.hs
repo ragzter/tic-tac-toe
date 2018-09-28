@@ -13,4 +13,3 @@ opponentOf :: Square -> Square
 opponentOf Zero = Cross
 opponentOf Cross = Zero
 opponentOf x = x
-

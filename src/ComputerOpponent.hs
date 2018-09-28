@@ -7,23 +7,23 @@ import Line
 import Board
 import Util
 
-opportunity :: Line -> Bool
-opportunity l =
-  nOf Zero sqs == 2 &&
+opportunity :: Line -> Square -> Bool
+opportunity l s =
+  nOf s sqs == 2 &&
   exists Blank sqs
   where
     sqs = map csqToSq $ cSquares l
 
-risky :: Line -> Bool
-risky l =
-  nOf Cross sqs == 2 &&
+risky :: Line -> Square -> Bool
+risky l s =
+  nOf (opponentOf s) sqs == 2 &&
   exists Blank sqs
   where
     sqs = map csqToSq $ cSquares l
 
-selfPopulated :: Line -> Bool
-selfPopulated l =
-  exists Zero sqs &&
+selfPopulated :: Line -> Square -> Bool
+selfPopulated l s =
+  exists s sqs &&
   exists Blank sqs
   where
     sqs = map csqToSq $ cSquares l
@@ -38,29 +38,29 @@ coordinateOfBlank :: Line -> (Int, Int)
 coordinateOfBlank l =
   coordinateOf $ head $ filter isBlank $ cSquares l
 
-applyLine :: Line -> Board -> Board
-applyLine l b =
-  put b x y Zero
+applyLine :: Line -> Board -> Square -> Board
+applyLine l b s =
+  put b x y s
   where
     coordinates = coordinateOfBlank l
     x = fst coordinates
     y = snd coordinates
 
-computerMove :: Board -> Board
-computerMove b =
+computerMove :: Board -> Square -> Board
+computerMove b s =
   if length opportunities > 0 then
-    applyLine (opportunities !! 0) b
+    applyLine (opportunities !! 0) b s
   else if length risks > 0 then
-    applyLine (risks !! 0) b
+    applyLine (risks !! 0) b s
   else if length selfPopulatedLines > 0 then
-    applyLine (selfPopulatedLines !! 0) b
+    applyLine (selfPopulatedLines !! 0) b s
   else if squareAt b 1 1 == Blank then
-    put b 1 1 Zero
+    put b 1 1 s
   else
-    applyLine availableLine b
+    applyLine availableLine b s
   where
     lines = getLines b
-    opportunities = filter opportunity lines
-    risks = filter risky lines
-    selfPopulatedLines = filter selfPopulated lines
+    opportunities = filter (\x -> opportunity x s) lines
+    risks = filter (\x -> risky x s) lines
+    selfPopulatedLines = filter (\x -> selfPopulated x s) lines
     availableLine = head $ filter available lines
