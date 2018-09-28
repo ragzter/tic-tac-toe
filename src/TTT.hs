@@ -23,15 +23,15 @@ loopGame s b = do {
       return $ computerMove b
     else
       readMove s b
-  ; detectAndHandleTheft b nb s
   ; winner <- maybeSqToIOSq $ winnerOf nb
-  ; if winner /= Blank then
+  ; if nb == b then
+      putStr "You can't steal another persons square!  Redo!\n\n" >> loopGame s b
+    else if winner /= Blank then
       putStr (show nb) >> announceWinner winner
+    else if draw nb then
+      putStr $ (show nb) ++ "\nEveryone is a winner!\n\n"
     else
-      if draw nb then
-        putStr $ (show nb) ++ "\nEveryone is a winner!\n\n"
-      else
-        loopGame (opponentOf s) nb
+      loopGame (opponentOf s) nb
   }
 
 readMove :: Square -> Board -> IO Board
@@ -52,10 +52,3 @@ announceWinner :: Square -> IO ()
 announceWinner s = do {
   ; putStr $ "\n" ++ show s ++ " won the game, congratulations!\n\n"
   }
-
-detectAndHandleTheft :: Board -> Board -> Square -> IO ()
-detectAndHandleTheft b nb s =
-  if nb == b then
-    putStr "You can't steal another persons square!  Redo!\n\n" >> loopGame s b
-  else
-    return ()
